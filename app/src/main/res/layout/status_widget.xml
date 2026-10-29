@@ -1,0 +1,12 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="14dp" android:background="@drawable/widget_bg">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="28dp" android:gravity="center_vertical" android:orientation="horizontal">
+        <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_brand" android:contentDescription="Status Updater" />
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="STATUS UPDATER" android:textSize="10sp" android:textStyle="bold" android:textColor="#A9BCC2" android:letterSpacing="0.08" />
+        <TextView android:id="@+id/widget_edit" android:layout_width="48dp" android:layout_height="match_parent" android:gravity="center" android:text="EDIT" android:textSize="11sp" android:textColor="#63E5BA" android:contentDescription="Edit saved matrix settings" />
+    </LinearLayout>
+    <TextView android:id="@+id/widget_message" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center_vertical" android:maxLines="2" android:ellipsize="end" android:text="Your text, one tap away" android:textColor="#FFBD66" android:textSize="19sp" android:textStyle="bold" />
+    <TextView android:id="@+id/widget_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="2" android:ellipsize="end" android:text="Set up in the app" android:textColor="#B5C5CA" android:textSize="11sp" android:layout_marginBottom="10dp" />
+    <TextView android:id="@+id/widget_send" android:layout_width="match_parent" android:layout_height="44dp" android:gravity="center" android:text="SHOW TEXT  ↗" android:textColor="#10251F" android:textSize="12sp" android:textStyle="bold" android:background="@drawable/widget_button" android:contentDescription="Show saved text on the matrix" />
+</LinearLayout>

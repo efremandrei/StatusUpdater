@@ -1,0 +1,29 @@
+<resources>
+    <style name="Theme.StatusUpdater" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#63E5BA</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
+        <item name="android:navigationBarColor">@color/splash_background</item>
+    </style>
+    <style name="Theme.StatusUpdater.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_brand</item>
+        <item name="postSplashScreenTheme">@style/Theme.StatusUpdater</item>
+    </style>
+    <style name="Theme.StatusUpdater.Light" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#137E60</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowBackground">#F2F5F3</item>
+        <item name="android:statusBarColor">#F2F5F3</item>
+        <item name="android:navigationBarColor">#F2F5F3</item>
+    </style>
+    <style name="Theme.StatusUpdater.Starting.Light" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#F2F5F3</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_brand</item>
+        <item name="postSplashScreenTheme">@style/Theme.StatusUpdater.Light</item>
+    </style>
+</resources>
