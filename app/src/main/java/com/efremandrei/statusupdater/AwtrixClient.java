@@ -27,6 +27,12 @@ public final class AwtrixClient {
         request(address, "/api/notify/dismiss", "{}");
     }
 
+    public void stop(String address) throws IOException {
+        clear(address);
+        try { request(address, "/api/switch", "{\"name\":\"Time\"}"); }
+        catch (IOException e) { throw new IOException("Text dismissed, but could not select the clock. Tap Stop to retry. " + friendlyError(e), e); }
+    }
+
     public String test(String address) throws IOException {
         String response = request(address, "/api/stats", null);
         try {
@@ -46,7 +52,7 @@ public final class AwtrixClient {
             connection.setReadTimeout(5000);
             connection.setInstanceFollowRedirects(false);
             connection.setRequestProperty("Accept", "application/json, text/plain");
-            connection.setRequestProperty("User-Agent", "StatusUpdater/1.0.0");
+            connection.setRequestProperty("User-Agent", "StatusUpdater/" + BuildConfig.VERSION_NAME);
             if (body != null) {
                 byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
                 connection.setRequestMethod("POST");

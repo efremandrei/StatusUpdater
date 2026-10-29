@@ -10,13 +10,15 @@ A small native Android app and home-screen widget for a Ulanzi TC001 running **A
 4. Use **Test connection** to check the AWTRIX API. Enter your text and duration in minutes (1–1440).
 5. Tap **Show text on matrix** to save and send, or **Save settings** to prepare the widget without sending.
 6. Tap **Add home-screen widget** and confirm with your launcher. You can also long-press the home screen → Widgets → Status Updater.
-7. Tap the widget's **Show text** button to send the saved settings directly. **Edit** opens the app.
+7. Tap the widget's **Show text** button to send the saved settings directly. It becomes an amber **Stop text** button while the message is running. Tap **Stop text** to cancel the display timer, dismiss the notification, and select AWTRIX's clock (`Time`). **Edit** opens the app.
 
 A new send replaces the matrix's current notification and restarts the duration. The firmware owns the timer, so the phone does not need to remain awake or connected after the request succeeds. At expiry, AWTRIX resumes its normal display. Matrix buttons, another sender, a reboot, or firmware settings can interrupt the notification earlier.
 
-**Clear display** dismisses the current notification, including one sent by another app. It does not turn the matrix off. The app asks before dismissing it.
+The app's **Stop text** action also dismisses the current notification and selects the clock. It asks for confirmation; the widget stops immediately with one tap. Dismissing a notification can affect one sent by another app. Normal AWTRIX clock/app rotation settings remain in effect.
 
-The widget shows request results, not live matrix state. “Sent” means the matrix accepted the HTTP request; it is not a live display monitor. All widget instances use the same last-saved configuration. Unsaved edits are not sent by the widget.
+The widget remembers the active message, its original IP, and its deadline. Saving a different IP/text/duration prepares the next send without changing the running message or its Stop target. All widget instances share this state. A failed start keeps **Show text**; a failed Stop keeps **Stop text** for retry. The state survives app restarts and updates. Expiry resets it to **Show text**. Android may defer the visual expiry refresh while idle; a still-visible **Stop text** button always stops and never starts a new message. No exact-alarm permission is needed.
+
+The widget's “Text on · until …” state is based on the last accepted request and elapsed time, not a live matrix feed. Other senders, matrix buttons, or reboots can change the display independently. Unsaved edits are not sent by the widget.
 
 ## Compatibility and privacy
 
@@ -39,7 +41,7 @@ Content-Type: application/json; charset=utf-8
 {"text":"In a meeting","duration":3600,"hold":false,"repeat":-1,"stack":false,"wakeup":true,"textCase":2,"color":"#FFBD66"}
 ```
 
-`GET /api/stats` tests the connection. `POST /api/notify/dismiss` clears the current notification. Redirects, web login pages, non-2xx responses, and network failures are reported as errors.
+`GET /api/stats` tests the connection. Stop sends `POST /api/notify/dismiss`, then `POST /api/switch` with `{"name":"Time"}`. Only after success does it clear the local active session and cancel its expiry refresh. Redirects, web login pages, non-2xx responses, and network failures are reported as errors.
 
 ## Build and test
 
@@ -50,7 +52,7 @@ Use JDK 17+, Android SDK platform 35, and the included Gradle 8.13 wrapper. Set 
 ./gradlew connectedDebugAndroidTest
 ```
 
-Unit tests exercise address/duration validation, Unicode JSON, exact API requests, and failure handling against a mock HTTP server. Android instrumentation tests cover defaults, theme recreation, settings persistence, foreground requests, error reporting, and a real AppWidgetHost button request that completes on the home screen. Tests use a simulated AWTRIX endpoint; they do not validate a physical Ulanzi or Samsung device.
+Unit tests exercise address/duration validation, Unicode JSON, exact start/stop/clock API requests, and failure handling against a mock HTTP server. Android instrumentation tests cover defaults, theme recreation, settings persistence, foreground requests, failed-start/failed-stop state, elapsed-time expiry, and a real AppWidgetHost start/stop cycle that completes on the home screen. The widget test changes the saved IP during the session and verifies Stop still reaches the original matrix. Tests use a simulated AWTRIX endpoint; they do not validate a physical Ulanzi or Samsung device.
 
 Release signing uses a private keystore kept outside the repository. Configure `STATUSUPDATER_KEYSTORE`, `STATUSUPDATER_STORE_PASSWORD`, and `STATUSUPDATER_KEY_PASSWORD`, with alias `statusupdater`, then run `./gradlew testReleaseUnitTest lintRelease assembleRelease`. Preserve this keystore for future in-place updates. Never commit it or its passwords. Release filenames include the version and build number.
 

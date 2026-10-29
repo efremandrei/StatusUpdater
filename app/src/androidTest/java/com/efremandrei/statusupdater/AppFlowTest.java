@@ -83,6 +83,7 @@ public class AppFlowTest {
     @Test public void widgetButtonSendsSavedSettingsAndFinishesWhileOnHomeScreen() throws Exception {
         try (MockWebServer server = new MockWebServer(); ActivityScenario<MainActivity> screen = ActivityScenario.launch(MainActivity.class)) {
             server.start(); server.enqueue(new MockResponse().setBody("OK").setBodyDelay(500, TimeUnit.MILLISECONDS));
+            server.enqueue(new MockResponse().setBody("OK")); server.enqueue(new MockResponse().setBody("OK"));
             new SettingsStore(context).save(MatrixConfig.create("127.0.0.1:" + server.getPort(), "From the widget", "30"));
             AppWidgetHost host = new AppWidgetHost(context, 765);
             int widgetId = host.allocateAppWidgetId();
@@ -98,10 +99,36 @@ public class AppFlowTest {
                 });
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync();
                 screen.onActivity(activity -> { assertNotNull(view.get().findViewById(R.id.widget_send)); view.get().findViewById(R.id.widget_send).performClick(); });
-                UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()); device.pressHome();
+                UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
                 RecordedRequest request = server.takeRequest(8, TimeUnit.SECONDS); assertNotNull(request);
                 JSONObject body = new JSONObject(request.getBody().readUtf8()); assertEquals("From the widget", body.getString("text")); assertEquals(1800, body.getInt("duration"));
-                waitForStatus("success"); assertNotEquals(context.getPackageName(), device.getCurrentPackageName());
+                waitForStatus("success");
+                assertTrue(new SettingsStore(context).active());
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                screen.onActivity(activity -> {
+                    assertEquals("STOP TEXT  ■", ((TextView) view.get().findViewById(R.id.widget_send)).getText().toString());
+                    new SettingsStore(context).save(MatrixConfig.create("192.0.2.1", "Next message", "60"));
+                    StatusWidget.refresh(activity);
+                });
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                screen.onActivity(activity -> {
+                    assertEquals("From the widget", ((TextView) view.get().findViewById(R.id.widget_message)).getText().toString());
+                    // Simulate an expiry whose visual refresh Android deferred.
+                    // The still-visible Stop button must stop the original IP,
+                    // not start the next saved message at its different IP.
+                    context.getSharedPreferences("matrix_settings", Context.MODE_PRIVATE).edit()
+                            .putLong("activeElapsedUntil", android.os.SystemClock.elapsedRealtime() - 1).commit();
+                    view.get().findViewById(R.id.widget_send).performClick();
+                });
+                device.pressHome();
+                RecordedRequest dismiss = server.takeRequest(8, TimeUnit.SECONDS); assertNotNull(dismiss);
+                RecordedRequest clock = server.takeRequest(8, TimeUnit.SECONDS); assertNotNull(clock);
+                assertEquals("/api/notify/dismiss", dismiss.getPath()); assertEquals("/api/switch", clock.getPath());
+                assertEquals("Time", new JSONObject(clock.getBody().readUtf8()).getString("name"));
+                waitForInactive(); assertEquals("success", new SettingsStore(context).kind());
+                assertNotEquals(context.getPackageName(), device.getCurrentPackageName());
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                screen.onActivity(activity -> assertEquals("SHOW TEXT  ↗", ((TextView) view.get().findViewById(R.id.widget_send)).getText().toString()));
             } finally {
                 host.stopListening(); host.deleteAppWidgetId(widgetId);
                 InstrumentationRegistry.getInstrumentation().getUiAutomation().dropShellPermissionIdentity();
@@ -112,6 +139,44 @@ public class AppFlowTest {
         long end = SystemClock.uptimeMillis() + 8000;
         while (SystemClock.uptimeMillis() < end) { if (kind.equals(new SettingsStore(context).kind())) return; SystemClock.sleep(50); }
         fail("Expected " + kind + ": " + new SettingsStore(context).status());
+    }
+    private void waitForInactive() {
+        long end = SystemClock.uptimeMillis() + 8000;
+        while (SystemClock.uptimeMillis() < end) { if (!new SettingsStore(context).active() && !"busy".equals(new SettingsStore(context).kind())) return; SystemClock.sleep(50); }
+        fail("Session is still active: " + new SettingsStore(context).status());
+    }
+    @Test public void failedStartNeverEnablesStopAndFailedStopKeepsRetryState() throws Exception {
+        try (MockWebServer server = new MockWebServer(); ActivityScenario<MainActivity> screen = ActivityScenario.launch(MainActivity.class)) {
+            server.start(); SettingsStore store = new SettingsStore(context);
+            MatrixConfig config = MatrixConfig.create("127.0.0.1:" + server.getPort(), "Retry me", "60"); store.save(config);
+            server.enqueue(new MockResponse().setResponseCode(500));
+            screen.onActivity(activity -> activity.startForegroundService(new android.content.Intent(activity, SendService.class).setAction(SendService.SEND)));
+            assertNotNull(server.takeRequest(8, TimeUnit.SECONDS)); waitForStatus("error"); assertFalse(store.active());
+            store.startSession(config); server.enqueue(new MockResponse().setResponseCode(500));
+            screen.onActivity(activity -> activity.startForegroundService(new android.content.Intent(activity, SendService.class).setAction(SendService.STOP)));
+            RecordedRequest stop = server.takeRequest(8, TimeUnit.SECONDS); assertNotNull(stop); assertEquals("/api/notify/dismiss", stop.getPath());
+            waitForStatus("error"); assertTrue(store.active()); assertEquals(config.address, store.activeAddress());
+        }
+    }
+    @Test public void expiredSessionClearsWithoutNetworkAndUsesElapsedTime() {
+        SettingsStore store = new SettingsStore(context); MatrixConfig config = MatrixConfig.create("192.0.2.1", "Timer", "60");
+        store.save(config); store.startSession(config);
+        context.getSharedPreferences("matrix_settings", Context.MODE_PRIVATE).edit().putLong("activeUntil", 1).commit();
+        assertTrue("Wall clock changes must not end a running session", store.active());
+        context.getSharedPreferences("matrix_settings", Context.MODE_PRIVATE).edit().putLong("activeElapsedUntil", android.os.SystemClock.elapsedRealtime() - 1).commit();
+        assertFalse(store.active()); store.expireIfNeeded();
+        assertEquals("", store.activeAddress()); assertEquals("ready", store.kind()); assertEquals("Timer", store.text());
+    }
+    @Test public void sessionSurvivesStoreReloadAndRebootFallback() {
+        MatrixConfig config = MatrixConfig.create("192.0.2.1", "Keep running", "60");
+        new SettingsStore(context).startSession(config);
+        SettingsStore reopened = new SettingsStore(context);
+        assertTrue(reopened.active()); assertEquals(config.address, reopened.activeAddress()); assertEquals(config.text, reopened.activeText());
+        context.getSharedPreferences("matrix_settings", Context.MODE_PRIVATE).edit().putInt("activeBoot", -999)
+                .putLong("activeElapsedUntil", 1).commit();
+        assertTrue("After reboot use the saved wall-clock deadline", reopened.active());
+        context.getSharedPreferences("matrix_settings", Context.MODE_PRIVATE).edit().putLong("activeUntil", 1).commit();
+        reopened.expireIfNeeded(); assertFalse(reopened.active()); assertEquals("", reopened.activeAddress());
     }
     private View findText(View view, String text) {
         if (view instanceof TextView && text.contentEquals(((TextView) view).getText())) return view;

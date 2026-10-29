@@ -127,10 +127,10 @@ public final class MainActivity extends Activity {
         status = label("", 12, muted, false); status.setPadding(dp(14), dp(12), dp(14), dp(12)); status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE); add(content, status, 14);
         Button show = button("Show text on matrix  ↗", true, this::send); add(content, show, 12, 54);
         LinearLayout secondary = row(); secondary.addView(button("Save settings", false, this::save), new LinearLayout.LayoutParams(0, dp(48), 1));
-        LinearLayout.LayoutParams clearParams = new LinearLayout.LayoutParams(0, dp(48), 1); clearParams.setMarginStart(dp(10)); secondary.addView(button("Clear display", false, this::clear), clearParams); add(content, secondary, 8);
+        LinearLayout.LayoutParams clearParams = new LinearLayout.LayoutParams(0, dp(48), 1); clearParams.setMarginStart(dp(10)); secondary.addView(button("Stop text", false, this::clear), clearParams); add(content, secondary, 8);
 
         LinearLayout widget = section("↗", "Make it one tap");
-        add(widget, label("Save your settings, then add the home-screen widget. Its Show text button sends without opening the app.", 12, muted, false), 10);
+        add(widget, label("One tap shows your text. The widget then becomes a Stop button to cancel the timer and return to the clock.", 12, muted, false), 10);
         add(widget, button("Add home-screen widget", false, this::pinWidget), 10, 46); add(content, widget, 20);
         TextView footer = label("LOCAL WI-FI  ·  NO ACCOUNT NEEDED", 10, muted, false); footer.setLetterSpacing(0.06f); footer.setGravity(Gravity.CENTER); add(content, footer, 20);
 
@@ -177,10 +177,10 @@ public final class MainActivity extends Activity {
     }
     private void clear() {
         try {
-            String host = MatrixConfig.normalizeAddress(address.getText().toString());
-            new AlertDialog.Builder(this).setTitle("Clear the current notification?")
-                    .setMessage("This dismisses whichever notification is currently on " + host + ", including one sent by another app.")
-                    .setNegativeButton("Cancel", null).setPositiveButton("Clear display", (d, w) -> startRequest(SendService.CLEAR, host)).show();
+            String host = store.active() ? store.activeAddress() : MatrixConfig.normalizeAddress(address.getText().toString());
+            new AlertDialog.Builder(this).setTitle("Stop text and return to clock?")
+                    .setMessage("This dismisses the current notification on " + host + " and selects its clock screen. Notifications from other apps can also be dismissed.")
+                    .setNegativeButton("Cancel", null).setPositiveButton("Stop text", (d, w) -> startRequest(SendService.STOP, host)).show();
         } catch (IllegalArgumentException e) { validation(e); }
     }
     private void startRequest(String action, String host) {
@@ -206,14 +206,14 @@ public final class MainActivity extends Activity {
                 + "\n\nBy Andrei Efremuahkin\nandrei.efr@gmail.com\n\nhttps://github.com/efremandrei/StatusUpdater"
                 + "\n\nFor Ulanzi matrices running AWTRIX 3 / AWTRIX Light. Other firmware is not supported."
                 + "\n\nUse the same reachable local network as your matrix. Settings stay on this phone. HTTP sends text unencrypted over your local network."
-                + "\n\nThe firmware handles message expiry. A new Show text request replaces the current notification and restarts the duration."
+                + "\n\nThe firmware handles message expiry. The widget changes from Show text to Stop while a message is running. Stop cancels it and selects the clock screen. Saving new settings does not change the active message or its Stop target."
                 + "\n\nPreview is approximate. Available characters, fonts, and scrolling depend on your firmware. No cloud account or analytics.", 14, ink, false);
         body.setPadding(dp(24), dp(10), dp(24), dp(16)); body.setTextIsSelectable(true); android.text.util.Linkify.addLinks(body, android.text.util.Linkify.WEB_URLS | android.text.util.Linkify.EMAIL_ADDRESSES);
         ScrollView scroll = new ScrollView(this); scroll.addView(body);
         new AlertDialog.Builder(this).setTitle("About").setView(scroll).setPositiveButton("Close", null).show();
     }
     private void hideKeyboard() { getSystemService(InputMethodManager.class).hideSoftInputFromWindow(address.getWindowToken(), 0); address.clearFocus(); message.clearFocus(); minutes.clearFocus(); }
-    @Override protected void onResume() { super.onResume(); ContextCompat.registerReceiver(this, updates, new IntentFilter(SendService.UPDATED), ContextCompat.RECEIVER_NOT_EXPORTED); updateStatus(); }
+    @Override protected void onResume() { super.onResume(); ContextCompat.registerReceiver(this, updates, new IntentFilter(SendService.UPDATED), ContextCompat.RECEIVER_NOT_EXPORTED); store.expireIfNeeded(); StatusWidget.refresh(this); updateStatus(); }
     @Override protected void onPause() { unregisterReceiver(updates); super.onPause(); }
     @Override public void onSaveInstanceState(Bundle out) { out.putString("draftAddress", address.getText().toString()); out.putString("draftMessage", message.getText().toString()); out.putString("draftMinutes", minutes.getText().toString()); super.onSaveInstanceState(out); }
 

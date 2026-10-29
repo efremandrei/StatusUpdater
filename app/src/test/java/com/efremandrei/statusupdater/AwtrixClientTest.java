@@ -44,6 +44,23 @@ public class AwtrixClientTest {
         server.enqueue(new MockResponse().setBody("OK")); new AwtrixClient().clear(base);
         RecordedRequest request = server.takeRequest(); assertEquals("/api/notify/dismiss", request.getPath()); assertEquals("POST", request.getMethod());
     }
+    @Test public void stopDismissesThenExplicitlySelectsClock() throws Exception {
+        server.enqueue(new MockResponse().setBody("OK")); server.enqueue(new MockResponse().setBody("OK"));
+        new AwtrixClient().stop(base);
+        RecordedRequest dismiss = server.takeRequest(), clock = server.takeRequest();
+        assertEquals("POST", dismiss.getMethod()); assertEquals("/api/notify/dismiss", dismiss.getPath());
+        assertEquals("POST", clock.getMethod()); assertEquals("/api/switch", clock.getPath());
+        assertEquals("Time", new JSONObject(clock.getBody().readUtf8()).getString("name"));
+    }
+    @Test public void stopFailureDoesNotPretendClockWasRestored() {
+        server.enqueue(new MockResponse().setBody("OK")); server.enqueue(new MockResponse().setResponseCode(500));
+        IOException error = assertThrows(IOException.class, () -> new AwtrixClient().stop(base));
+        assertTrue(error.getMessage().contains("Text dismissed")); assertTrue(error.getMessage().contains("retry"));
+    }
+    @Test public void failedDismissDoesNotIssueClockSwitch() {
+        server.enqueue(new MockResponse().setResponseCode(500));
+        assertThrows(IOException.class, () -> new AwtrixClient().stop(base)); assertEquals(1, server.getRequestCount());
+    }
     @Test public void reportsHttpFailureAndRejectsRedirect() throws Exception {
         for (int error : new int[]{401, 403, 404, 500, 302}) { server.enqueue(new MockResponse().setResponseCode(error)); assertThrows(IOException.class, () -> new AwtrixClient().send(MatrixConfig.create(base, "Message", "60"))); }
     }

@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">Status Updater</string>
     <string name="widget_name">Status Updater · Show text</string>
-    <string name="widget_description">One tap sends your saved text and duration to your AWTRIX matrix.</string>
+    <string name="widget_description">Tap to show your saved text; tap Stop to cancel it and return to the clock.</string>
 </resources>

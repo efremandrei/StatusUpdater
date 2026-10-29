@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 public final class SendService extends Service {
     public static final String SEND = "com.efremandrei.statusupdater.SEND";
     public static final String CLEAR = "com.efremandrei.statusupdater.CLEAR";
+    public static final String STOP = "com.efremandrei.statusupdater.STOP";
     public static final String TEST = "com.efremandrei.statusupdater.TEST";
     public static final String UPDATED = "com.efremandrei.statusupdater.UPDATED";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -31,7 +32,11 @@ public final class SendService extends Service {
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (busy) return START_NOT_STICKY;
         busy = true;
+        SettingsStore store = new SettingsStore(this);
+        store.expireIfNeeded();
         String action = intent == null ? null : intent.getAction();
+        String activeAddress = store.activeAddress();
+        String stopAddress = !activeAddress.isEmpty() ? activeAddress : intent == null ? null : intent.getStringExtra("address");
         NotificationManager manager = getSystemService(NotificationManager.class);
         manager.createNotificationChannel(new NotificationChannel("matrix_requests", "Matrix requests", NotificationManager.IMPORTANCE_LOW));
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
@@ -41,9 +46,8 @@ public final class SendService extends Service {
         if (Build.VERSION.SDK_INT >= 34) startForeground(101, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE);
         else startForeground(101, notification);
         wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "StatusUpdater:Request");
-        wakeLock.acquire(20000);
-        SettingsStore store = new SettingsStore(this);
-        store.status("Contacting matrix…", "busy");
+        wakeLock.acquire(45000);
+        store.status(STOP.equals(action) ? "Stopping text…" : "Contacting matrix…", "busy");
         changed();
         executor.execute(() -> {
             String message;
@@ -54,10 +58,16 @@ public final class SendService extends Service {
                     message = client.test(intent.getStringExtra("address"));
                 } else if (CLEAR.equals(action)) {
                     client.clear(intent.getStringExtra("address"));
+                    if (store.activeAddress().equals(intent.getStringExtra("address"))) store.endSession();
                     message = "Current notification dismissed · " + time();
+                } else if (STOP.equals(action)) {
+                    client.stop(stopAddress);
+                    store.endSession();
+                    message = "Text stopped · clock restored · " + time();
                 } else if (SEND.equals(action)) {
                     MatrixConfig config = store.config();
                     client.send(config);
+                    store.startSession(config);
                     message = "Sent " + time() + " · " + MatrixConfig.durationLabel(config.minutes);
                 } else throw new IllegalArgumentException("Open the app and save your matrix settings first.");
                 kind = "success";
