@@ -14,7 +14,9 @@ public final class MatrixPreview extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Bitmap pixels;
     private long start;
+    private int textColor = Color.parseColor(MatrixConfig.DEFAULT_COLOR);
     public MatrixPreview(Context context) { super(context); setMessage(""); setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES); }
+    public void setTextColor(int color) { textColor = color; invalidate(); }
     public void setMessage(String message) {
         String display = message.trim().isEmpty() ? "HELLO" : message.replace('\n', ' ');
         Paint text = new Paint();
@@ -37,7 +39,7 @@ public final class MatrixPreview extends View {
         for (int y = 0; y < 8; y++) for (int x = 0; x < 32; x++) {
             int source = (x + offset) % (pixels.getWidth() + 16);
             boolean on = source < pixels.getWidth() && Color.alpha(pixels.getPixel(source, y)) > 80;
-            paint.setColor(on ? 0xFFFFBD66 : 0xFF242D2E);
+            paint.setColor(on ? textColor : 0xFF242D2E);
             canvas.drawCircle(left + (x + 0.5f) * cell, top + (y + 0.5f) * cell, cell * 0.33f, paint);
         }
         if (pixels.getWidth() > 32 && isShown()) postInvalidateDelayed(100);

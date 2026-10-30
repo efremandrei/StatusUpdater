@@ -23,4 +23,17 @@ public class MatrixConfigTest {
         assertEquals(86400, MatrixConfig.create("192.168.1.50", "Valid", "1440").seconds());
     }
     @Test public void preservesUnicodeAndQuotes() { assertEquals("פגישה \"Meeting\"\nBack soon ☕", MatrixConfig.create("awtrix.local", " פגישה \"Meeting\"\nBack soon ☕ ", "60").text); }
+    @Test public void defaultsToAmberAndNormalizesRgbHexColors() {
+        assertEquals("#FFBD66", MatrixConfig.create("awtrix.local", "Legacy", "60").color);
+        assertEquals("#12ABEF", MatrixConfig.create("awtrix.local", "Custom", "60", " 12abef ").color);
+        assertEquals("#000000", MatrixConfig.normalizeColor("#000000"));
+        assertEquals("#FFFFFF", MatrixConfig.normalizeColor("#ffffff"));
+    }
+    @Test public void rejectsMalformedAndAlphaColors() {
+        for (String color : new String[]{null, "", "#FFF", "#12345", "#12345678", "12345G", "red", "##123456"}) {
+            MatrixConfig.ValidationException error = assertThrows(MatrixConfig.ValidationException.class,
+                    () -> MatrixConfig.create("awtrix.local", "Color", "60", color));
+            assertEquals("color", error.field);
+        }
+    }
 }

@@ -29,6 +29,15 @@ public class AwtrixClientTest {
         JSONObject json = new JSONObject(request.getBody().readUtf8()); assertEquals(text, json.getString("text"));
         assertEquals(3600, json.getInt("duration")); assertEquals(-1, json.getInt("repeat"));
         assertFalse(json.getBoolean("hold")); assertFalse(json.getBoolean("stack")); assertTrue(json.getBoolean("wakeup"));
+        assertEquals("#FFBD66", json.getString("color"));
+    }
+    @Test public void sendsChosenRgbColorInNotification() throws Exception {
+        for (String color : new String[]{"#12abef", "FFFFFF", "#000000"}) {
+            server.enqueue(new MockResponse().setBody("OK"));
+            new AwtrixClient().send(MatrixConfig.create(base, "Chosen color", "30", color));
+            JSONObject json = new JSONObject(server.takeRequest().getBody().readUtf8());
+            assertEquals(MatrixConfig.normalizeColor(color), json.getString("color"));
+        }
     }
     @Test public void configurableDurationUsesSeconds() throws Exception {
         server.enqueue(new MockResponse().setBody("OK"));

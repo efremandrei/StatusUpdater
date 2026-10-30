@@ -38,6 +38,10 @@ public final class MainActivity extends Activity {
     private EditText address, message, minutes;
     private TextView status, counter, durationHint;
     private MatrixPreview preview;
+    private Button colorButton;
+    private String selectedColor;
+    private static final String[] COLOR_NAMES = {"Amber", "White", "Red", "Orange", "Yellow", "Lime", "Green", "Mint", "Cyan", "Blue", "Purple", "Pink"};
+    private static final String[] COLORS = {"#FFBD66", "#FFFFFF", "#FF5252", "#FF8A3D", "#FFE066", "#B8F34A", "#46E085", "#63E5BA", "#46DFFF", "#6699FF", "#B88AFF", "#FF80C8"};
     private boolean light;
     private int bg, card, ink, muted, border, accent, field;
     private final BroadcastReceiver updates = new BroadcastReceiver() {
@@ -46,6 +50,7 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         store = new SettingsStore(this);
+        selectedColor = state == null ? store.color() : state.getString("draftColor", store.color());
         light = store.light();
         setTheme(light ? R.style.Theme_StatusUpdater_Starting_Light : R.style.Theme_StatusUpdater_Starting);
         SplashScreen.installSplashScreen(this);
@@ -88,7 +93,7 @@ public final class MainActivity extends Activity {
         LinearLayout displayTop = row();
         TextView previewLabel = label("●  TEXT PREVIEW", 10, c("#FFBD66"), true); previewLabel.setLetterSpacing(0.08f);
         displayTop.addView(previewLabel, new LinearLayout.LayoutParams(0, -2, 1)); displayTop.addView(label("32 × 8", 10, c("#91A4AA"), false)); display.addView(displayTop);
-        preview = new MatrixPreview(this); display.addView(preview, new LinearLayout.LayoutParams(-1, dp(94)));
+        preview = new MatrixPreview(this); preview.setId(R.id.matrix_preview); display.addView(preview, new LinearLayout.LayoutParams(-1, dp(94)));
         TextView previewNote = label("Approximation · actual font depends on firmware", 10, c("#91A4AA"), false); previewNote.setGravity(Gravity.CENTER); display.addView(previewNote);
         add(content, display, 20);
 
@@ -107,6 +112,8 @@ public final class MainActivity extends Activity {
         message.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         message.setMinLines(2); message.setMaxLines(5); message.setGravity(Gravity.TOP | Gravity.START); message.setFilters(new InputFilter[]{new InputFilter.LengthFilter(500)}); message.setText(store.text());
         add(composition, message, 12);
+        colorButton = button("", false, this::chooseColor); colorButton.setId(R.id.text_color);
+        add(composition, colorButton, 8, 48);
         LinearLayout messageBottom = row(); messageBottom.addView(label("Long text scrolls automatically", 11, muted, false), new LinearLayout.LayoutParams(0, -2, 1));
         counter = label("", 11, muted, false); messageBottom.addView(counter); add(composition, messageBottom, 8); add(content, composition, 12);
 
@@ -140,11 +147,66 @@ public final class MainActivity extends Activity {
             minutes.setText(state.getString("draftMinutes", Integer.toString(store.minutes())));
         }
         message.addTextChangedListener(watcher(this::previewChanged)); minutes.addTextChangedListener(watcher(this::durationChanged));
-        previewChanged(); durationChanged(); updateStatus();
+        colorChanged(); previewChanged(); durationChanged(); updateStatus();
         root.requestApplyInsets();
     }
 
     private void previewChanged() { String text = message.getText().toString(); counter.setText(text.length() + " / 500"); preview.setMessage(text); }
+    private void colorChanged() {
+        String name = selectedColor;
+        for (int i = 0; i < COLORS.length; i++) if (COLORS[i].equals(selectedColor)) name = COLOR_NAMES[i] + " · " + selectedColor;
+        colorButton.setText("Text color   " + name + "   ▾");
+        colorButton.setContentDescription("Choose text color, current color " + name);
+        GradientDrawable swatch = shape(c(selectedColor), border, 5); swatch.setBounds(0, 0, dp(20), dp(20));
+        colorButton.setCompoundDrawablesRelative(swatch, null, null, null); colorButton.setCompoundDrawablePadding(dp(8));
+        preview.setTextColor(c(selectedColor));
+    }
+    private void chooseColor() {
+        hideKeyboard();
+        LinearLayout picker = column(); picker.setPadding(dp(24), dp(8), dp(24), dp(8));
+        TextView sample = label(message.getText().toString().trim().isEmpty() ? "Your text on the matrix" : message.getText().toString(), 17, c(selectedColor), true);
+        sample.setGravity(Gravity.CENTER); sample.setMaxLines(2); sample.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        sample.setPadding(dp(12), dp(10), dp(12), dp(10)); sample.setBackground(shape(c("#0A1012"), c("#34434A"), 12));
+        picker.addView(sample, new LinearLayout.LayoutParams(-1, dp(64)));
+        EditText hex = input("#RRGGBB", "Custom text color hex code", R.id.color_hex);
+        hex.setSingleLine(true); hex.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        hex.setFilters(new InputFilter[]{new InputFilter.LengthFilter(7)}); hex.setText(selectedColor);
+        Button[] swatches = new Button[COLORS.length];
+        for (int rowIndex = 0; rowIndex < 3; rowIndex++) {
+            LinearLayout paletteRow = row();
+            for (int col = 0; col < 4; col++) {
+                final int index = rowIndex * 4 + col;
+                Button swatch = button("", false, () -> hex.setText(COLORS[index]));
+                swatch.setTextSize(18); swatch.setBackground(shape(c(COLORS[index]), border, 12));
+                swatch.setTextColor(c("#10251F")); swatch.setContentDescription(COLOR_NAMES[index] + " " + COLORS[index]);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(48), 1);
+                if (col > 0) params.setMarginStart(dp(8)); paletteRow.addView(swatch, params); swatches[index] = swatch;
+            }
+            add(picker, paletteRow, 10);
+        }
+        add(picker, label("Custom hex color", 12, muted, false), 16); add(picker, hex, 6, 52);
+        add(picker, label("Used by the matrix preview and your next send. Save settings to use it from either widget.", 11, muted, false), 10);
+        Runnable updateSample = () -> {
+            try {
+                String color = MatrixConfig.normalizeColor(hex.getText().toString()); sample.setTextColor(c(color)); hex.setError(null);
+                for (int i = 0; i < swatches.length; i++) {
+                    boolean selected = COLORS[i].equals(color); swatches[i].setText(selected ? "✓" : ""); swatches[i].setSelected(selected);
+                }
+            } catch (MatrixConfig.ValidationException e) {
+                for (Button swatch : swatches) { swatch.setText(""); swatch.setSelected(false); }
+            }
+        };
+        hex.addTextChangedListener(watcher(updateSample)); updateSample.run();
+        ScrollView scroll = new ScrollView(this); scroll.addView(picker);
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Text color").setView(scroll)
+                .setNegativeButton("Cancel", null).setPositiveButton("Use color", null).create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
+            try { selectedColor = MatrixConfig.normalizeColor(hex.getText().toString()); colorChanged(); dialog.dismiss(); }
+            catch (MatrixConfig.ValidationException e) { hex.setError(e.getMessage()); hex.requestFocus(); }
+        }));
+        dialog.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE | android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+        dialog.show();
+    }
     private void durationChanged() {
         try { int value = Integer.parseInt(minutes.getText().toString()); durationHint.setText(value >= 1 && value <= 1440 ? MatrixConfig.durationLabel(value) : "1–1440 min"); }
         catch (NumberFormatException e) { durationHint.setText("1–1440 min"); }
@@ -154,7 +216,7 @@ public final class MainActivity extends Activity {
         public void onTextChanged(CharSequence s, int start, int before, int count) { action.run(); }
         public void afterTextChanged(Editable e) { }
     }; }
-    private MatrixConfig validate() { return MatrixConfig.create(address.getText().toString(), message.getText().toString(), minutes.getText().toString()); }
+    private MatrixConfig validate() { return MatrixConfig.create(address.getText().toString(), message.getText().toString(), minutes.getText().toString(), selectedColor); }
     private void validation(Exception e) {
         if (e instanceof MatrixConfig.ValidationException) {
             String fieldName = ((MatrixConfig.ValidationException) e).field;
@@ -221,7 +283,7 @@ public final class MainActivity extends Activity {
     private void hideKeyboard() { getSystemService(InputMethodManager.class).hideSoftInputFromWindow(address.getWindowToken(), 0); address.clearFocus(); message.clearFocus(); minutes.clearFocus(); }
     @Override protected void onResume() { super.onResume(); ContextCompat.registerReceiver(this, updates, new IntentFilter(SendService.UPDATED), ContextCompat.RECEIVER_NOT_EXPORTED); store.expireIfNeeded(); StatusWidget.refresh(this); updateStatus(); }
     @Override protected void onPause() { unregisterReceiver(updates); super.onPause(); }
-    @Override public void onSaveInstanceState(Bundle out) { out.putString("draftAddress", address.getText().toString()); out.putString("draftMessage", message.getText().toString()); out.putString("draftMinutes", minutes.getText().toString()); super.onSaveInstanceState(out); }
+    @Override public void onSaveInstanceState(Bundle out) { out.putString("draftAddress", address.getText().toString()); out.putString("draftMessage", message.getText().toString()); out.putString("draftMinutes", minutes.getText().toString()); out.putString("draftColor", selectedColor); super.onSaveInstanceState(out); }
 
     private int c(String hex) { return Color.parseColor(hex); }
     private int dp(float value) { return Math.round(value * getResources().getDisplayMetrics().density); }

@@ -42,6 +42,7 @@ public final class StatusWidget extends AppWidgetProvider {
             views.setContentDescription(R.id.widget_root, description);
         } else {
             views.setTextViewText(R.id.widget_message, active ? store.activeText() : configured ? store.text() : "Your text, one tap away");
+            views.setTextColor(R.id.widget_message, android.graphics.Color.parseColor(active ? store.activeColor() : store.color()));
             String end = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(new java.util.Date(store.activeUntil()));
             views.setTextViewText(R.id.widget_status, active && !"error".equals(store.kind()) && !busy ? "Text on · until " + end : configured
                     ? ("ready".equals(store.kind()) ? MatrixConfig.durationLabel(store.minutes()) + " · " + store.address().replaceFirst("^https?://", "") : store.status())

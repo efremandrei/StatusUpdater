@@ -2,4 +2,7 @@
     <item name="address" type="id" />
     <item name="message" type="id" />
     <item name="minutes" type="id" />
+    <item name="text_color" type="id" />
+    <item name="color_hex" type="id" />
+    <item name="matrix_preview" type="id" />
 </resources>

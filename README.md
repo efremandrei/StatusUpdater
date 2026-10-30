@@ -7,7 +7,7 @@ A small native Android app and home-screen widget for a Ulanzi TC001 running **A
 1. Install the APK from [Releases](https://github.com/efremandrei/StatusUpdater/releases).
 2. Connect your phone and matrix to the same reachable Wi-Fi network.
 3. Enter the matrix IP (for example `192.168.1.50`). Hostnames such as `awtrix.local`, optional ports, and explicit HTTP/HTTPS addresses also work. Most AWTRIX devices use HTTP.
-4. Use **Test connection** to check the AWTRIX API. Enter your text and duration in minutes (1–1440).
+4. Use **Test connection** to check the AWTRIX API. Enter your text and duration in minutes (1–1440). Tap **Text color** under the message to choose one of 12 swatches or enter a custom six-digit RGB hex color (`#RRGGBB`). The picker previews your message; **Use color** applies it to the draft and the LED preview. **Cancel** leaves your previous choice intact. Amber (`#FFBD66`) remains the default.
 5. Tap **Show text on matrix** to save and send, or **Save settings** to prepare the widget without sending.
 6. Tap **Add home-screen widget**, choose **Compact · 1×1** or **Full · 3×2**, and confirm with your launcher. You can also long-press the home screen → Widgets → Status Updater. The compact widget is a single-cell button: green **SHOW** starts your saved text, amber **STOP** returns to the clock, and **WAIT** prevents duplicate taps while a request runs. Before setup, tapping it opens the app. The full widget also shows your message and status, with an **Edit** shortcut.
 7. Tap the widget's **Show text** button to send the saved settings directly. It becomes an amber **Stop text** button while the message is running. Tap **Stop text** to cancel the display timer, dismiss the notification, and select AWTRIX's clock (`Time`). **Edit** opens the app.
@@ -19,6 +19,8 @@ The app's **Stop text** action also dismisses the current notification and selec
 The widget remembers the active message, its original IP, and its deadline. Saving a different IP/text/duration prepares the next send without changing the running message or its Stop target. All widget instances share this state. A failed start keeps **Show text**; a failed Stop keeps **Stop text** for retry. The state survives app restarts and updates. Expiry resets it to **Show text**. Android may defer the visual expiry refresh while idle; a still-visible **Stop text** button always stops and never starts a new message. No exact-alarm permission is needed.
 
 The widget's “Text on · until …” state is based on the last accepted request and elapsed time, not a live matrix feed. Other senders, matrix buttons, or reboots can change the display independently. Unsaved edits are not sent by the widget.
+
+Your chosen text color is saved with the IP, message, and duration when you tap **Save settings** or **Show text on matrix**. Both widget sizes send that saved color. The full widget previews the saved color, or the original running message's color while active. Changing settings does not recolor a running message; send again to replace it. Existing settings and active sessions from earlier versions retain the original amber color on upgrade. Color drafts survive theme changes and activity recreation.
 
 ## Compatibility and privacy
 
@@ -44,6 +46,8 @@ Content-Type: application/json; charset=utf-8
 `GET /api/stats` tests the connection. Stop sends `POST /api/notify/dismiss`, then `POST /api/switch` with `{"name":"Time"}`. Only after success does it clear the local active session and cancel its expiry refresh. Redirects, web login pages, non-2xx responses, and network failures are reported as errors.
 
 ## Build and test
+
+Text-color tests cover RGB validation and normalization, the notification payload, preset/custom picker controls, invalid input, Cancel, actual preview pixels, draft recreation, saved color persistence, and amber defaults for settings and running sessions created before color support. Both widget tests verify that their requests contain the saved color and that an active full widget retains the running message's color after settings change.
 
 Use JDK 17+, Android SDK platform 35, and the included Gradle 8.13 wrapper. Set `ANDROID_HOME` or create an ignored `local.properties` with `sdk.dir`.
 

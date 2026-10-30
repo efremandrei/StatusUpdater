@@ -84,7 +84,7 @@ public class AppFlowTest {
         try (MockWebServer server = new MockWebServer(); ActivityScenario<MainActivity> screen = ActivityScenario.launch(MainActivity.class)) {
             server.start(); server.enqueue(new MockResponse().setBody("OK").setBodyDelay(500, TimeUnit.MILLISECONDS));
             server.enqueue(new MockResponse().setBody("OK")); server.enqueue(new MockResponse().setBody("OK"));
-            new SettingsStore(context).save(MatrixConfig.create("127.0.0.1:" + server.getPort(), "From the widget", "30"));
+            new SettingsStore(context).save(MatrixConfig.create("127.0.0.1:" + server.getPort(), "From the widget", "30", "#6699FF"));
             AppWidgetHost host = new AppWidgetHost(context, 765);
             int widgetId = host.allocateAppWidgetId();
             InstrumentationRegistry.getInstrumentation().getUiAutomation().adoptShellPermissionIdentity("android.permission.BIND_APPWIDGET");
@@ -102,6 +102,7 @@ public class AppFlowTest {
                 UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
                 RecordedRequest request = server.takeRequest(8, TimeUnit.SECONDS); assertNotNull(request);
                 JSONObject body = new JSONObject(request.getBody().readUtf8()); assertEquals("From the widget", body.getString("text")); assertEquals(1800, body.getInt("duration"));
+                assertEquals("#6699FF", body.getString("color"));
                 waitForStatus("success");
                 assertTrue(new SettingsStore(context).active());
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync();
@@ -113,6 +114,7 @@ public class AppFlowTest {
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync();
                 screen.onActivity(activity -> {
                     assertEquals("From the widget", ((TextView) view.get().findViewById(R.id.widget_message)).getText().toString());
+                    assertEquals(android.graphics.Color.parseColor("#6699FF"), ((TextView) view.get().findViewById(R.id.widget_message)).getCurrentTextColor());
                     // Simulate an expiry whose visual refresh Android deferred.
                     // The still-visible Stop button must stop the original IP,
                     // not start the next saved message at its different IP.

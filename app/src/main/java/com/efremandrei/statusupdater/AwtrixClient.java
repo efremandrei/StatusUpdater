@@ -15,7 +15,7 @@ public final class AwtrixClient {
     public static JSONObject payload(MatrixConfig config) throws JSONException {
         return new JSONObject().put("text", config.text).put("duration", config.seconds())
                 .put("hold", false).put("repeat", -1).put("stack", false)
-                .put("wakeup", true).put("textCase", 2).put("color", "#FFBD66");
+                .put("wakeup", true).put("textCase", 2).put("color", config.color);
     }
 
     public void send(MatrixConfig config) throws IOException {

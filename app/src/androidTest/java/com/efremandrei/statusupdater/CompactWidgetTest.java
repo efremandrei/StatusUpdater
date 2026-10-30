@@ -73,7 +73,7 @@ public class CompactWidgetTest {
                     TextView label = compact.get().findViewById(R.id.widget_send);
                     assertTrue("Label must fit inside the one-cell tile", label.getBottom() <= root.getHeight() - root.getPaddingBottom());
                     assertTrue("Setup label must not be clipped", label.getPaint().measureText("SET UP") <= label.getWidth());
-                    store.save(MatrixConfig.create("127.0.0.1:" + server.getPort(), "Compact widget message", "30"));
+                    store.save(MatrixConfig.create("127.0.0.1:" + server.getPort(), "Compact widget message", "30", "#46DFFF"));
                     StatusWidget.refresh(activity);
                 });
                 idle();
@@ -87,6 +87,7 @@ public class CompactWidgetTest {
                 assertEquals("/api/notify", start.getPath());
                 JSONObject body = new JSONObject(start.getBody().readUtf8());
                 assertEquals("Compact widget message", body.getString("text")); assertEquals(1800, body.getInt("duration"));
+                assertEquals("#46DFFF", body.getString("color"));
                 idle();
                 screen.onActivity(activity -> {
                     assertLabel(compact.get(), "WAIT");
@@ -96,6 +97,7 @@ public class CompactWidgetTest {
                 waitForKind("success"); idle();
                 screen.onActivity(activity -> {
                     assertLabel(compact.get(), "STOP"); assertLabel(full.get(), "STOP TEXT  ■");
+                    assertEquals(android.graphics.Color.parseColor("#46DFFF"), ((TextView) full.get().findViewById(R.id.widget_message)).getCurrentTextColor());
                     // Edits prepare the next send; both widgets must still stop the original matrix.
                     store.save(MatrixConfig.create("192.0.2.1", "Next message", "60"));
                     StatusWidget.refresh(activity);

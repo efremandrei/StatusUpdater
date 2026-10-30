@@ -10,14 +10,19 @@ public final class SettingsStore {
     public String address() { return prefs.getString("address", ""); }
     public String text() { return prefs.getString("text", ""); }
     public int minutes() { return prefs.getInt("minutes", MatrixConfig.DEFAULT_MINUTES); }
+    public String color() { return readColor("color"); }
+    private String readColor(String key) {
+        try { return MatrixConfig.normalizeColor(prefs.getString(key, MatrixConfig.DEFAULT_COLOR)); }
+        catch (MatrixConfig.ValidationException e) { return MatrixConfig.DEFAULT_COLOR; }
+    }
     public boolean light() { return prefs.getBoolean("light", false); }
     public void setLight(boolean light) { prefs.edit().putBoolean("light", light).apply(); }
     public void save(MatrixConfig config) {
         if (!prefs.edit().putString("address", config.address).putString("text", config.text)
-                .putInt("minutes", config.minutes).putString("status", "Saved · ready to show")
+                .putInt("minutes", config.minutes).putString("color", config.color).putString("status", "Saved · ready to show")
                 .putString("kind", "ready").commit()) throw new IllegalStateException("Could not save settings. Try again.");
     }
-    public MatrixConfig config() { return MatrixConfig.create(address(), text(), Integer.toString(minutes())); }
+    public MatrixConfig config() { return MatrixConfig.create(address(), text(), Integer.toString(minutes()), color()); }
     public boolean configured() { try { config(); return true; } catch (IllegalArgumentException e) { return false; } }
     private int bootCount() { return android.provider.Settings.Global.getInt(context.getContentResolver(), android.provider.Settings.Global.BOOT_COUNT, -1); }
     public long remainingMillis() {
@@ -31,18 +36,20 @@ public final class SettingsStore {
     public boolean active() { return remainingMillis() > 0; }
     public String activeAddress() { return prefs.getString("activeAddress", ""); }
     public String activeText() { return prefs.getString("activeText", ""); }
+    public String activeColor() { return readColor("activeColor"); }
     public long activeUntil() { return System.currentTimeMillis() + remainingMillis(); }
     @android.annotation.SuppressLint("ApplySharedPref")
     public void startSession(MatrixConfig config) {
         long duration = config.seconds() * 1000L;
         prefs.edit().putString("activeAddress", config.address).putString("activeText", config.text)
+                .putString("activeColor", config.color)
                 .putLong("activeUntil", System.currentTimeMillis() + duration)
                 .putLong("activeElapsedUntil", android.os.SystemClock.elapsedRealtime() + duration)
                 .putInt("activeBoot", bootCount()).commit();
     }
     @android.annotation.SuppressLint("ApplySharedPref")
     public void endSession() {
-        prefs.edit().remove("activeAddress").remove("activeText").remove("activeUntil")
+        prefs.edit().remove("activeAddress").remove("activeText").remove("activeColor").remove("activeUntil")
                 .remove("activeElapsedUntil").remove("activeBoot").commit();
     }
     public void expireIfNeeded() {
