@@ -130,7 +130,7 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams clearParams = new LinearLayout.LayoutParams(0, dp(48), 1); clearParams.setMarginStart(dp(10)); secondary.addView(button("Stop text", false, this::clear), clearParams); add(content, secondary, 8);
 
         LinearLayout widget = section("↗", "Make it one tap");
-        add(widget, label("One tap shows your text. The widget then becomes a Stop button to cancel the timer and return to the clock.", 12, muted, false), 10);
+        add(widget, label("Choose a compact 1×1 button or the full widget. One tap shows your text; tap Stop to cancel the timer and return to the clock.", 12, muted, false), 10);
         add(widget, button("Add home-screen widget", false, this::pinWidget), 10, 46); add(content, widget, 20);
         TextView footer = label("LOCAL WI-FI  ·  NO ACCOUNT NEEDED", 10, muted, false); footer.setLetterSpacing(0.06f); footer.setGravity(Gravity.CENTER); add(content, footer, 20);
 
@@ -189,8 +189,14 @@ public final class MainActivity extends Activity {
     }
     private void pinWidget() {
         if (!saveSettings(false)) return;
+        new AlertDialog.Builder(this).setTitle("Choose a widget")
+                .setItems(new String[]{"Compact · 1×1", "Full · 3×2"}, (dialog, which) ->
+                        pinWidget(which == 0 ? CompactStatusWidget.class : StatusWidget.class))
+                .setNegativeButton("Cancel", null).show();
+    }
+    private void pinWidget(Class<?> provider) {
         AppWidgetManager manager = getSystemService(AppWidgetManager.class);
-        if (manager.isRequestPinAppWidgetSupported()) manager.requestPinAppWidget(new ComponentName(this, StatusWidget.class), null, null);
+        if (manager.isRequestPinAppWidgetSupported()) manager.requestPinAppWidget(new ComponentName(this, provider), null, null);
         else new AlertDialog.Builder(this).setTitle("Add Status Updater")
                 .setMessage("Long-press an empty space on your home screen, choose Widgets, then drag Status Updater onto the home screen.")
                 .setPositiveButton("Got it", null).show();

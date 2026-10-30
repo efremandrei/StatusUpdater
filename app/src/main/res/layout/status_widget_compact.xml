@@ -1,0 +1,14 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:gravity="center" android:padding="3dp"
+    android:background="@drawable/widget_button" android:focusable="true"
+    android:contentDescription="@string/compact_widget_setup">
+    <ImageView android:id="@+id/widget_symbol" android:layout_width="20dp" android:layout_height="20dp"
+        android:src="@drawable/widget_play" android:importantForAccessibility="no" />
+    <TextView android:id="@+id/widget_send" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center" android:text="@string/compact_widget_show" android:textSize="10sp"
+        android:textStyle="bold" android:textColor="#10251F" android:includeFontPadding="false"
+        android:maxLines="1" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="8sp"
+        android:autoSizeMaxTextSize="10sp" android:autoSizeStepGranularity="1sp"
+        android:importantForAccessibility="no" />
+</LinearLayout>

@@ -23,6 +23,10 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/status_widget_info" />
         </receiver>
+        <receiver android:name=".CompactStatusWidget" android:exported="false" android:label="@string/compact_widget_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/compact_status_widget_info" />
+        </receiver>
         <receiver android:name=".SessionTimer" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

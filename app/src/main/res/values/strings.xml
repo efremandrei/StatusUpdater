@@ -2,4 +2,8 @@
     <string name="app_name">Status Updater</string>
     <string name="widget_name">Status Updater · Show text</string>
     <string name="widget_description">Tap to show your saved text; tap Stop to cancel it and return to the clock.</string>
+    <string name="compact_widget_name">Status Updater · Compact 1×1</string>
+    <string name="compact_widget_description">One-cell Show/Stop button for your saved matrix message. Shares settings with the full widget.</string>
+    <string name="compact_widget_setup">Open Status Updater to set up your matrix</string>
+    <string name="compact_widget_show">SHOW</string>
 </resources>
