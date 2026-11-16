@@ -276,7 +276,7 @@ public final class MainActivity extends Activity {
                 + "\n\nUse the same reachable local network as your matrix. Settings stay on this phone. HTTP sends text unencrypted over your local network."
                 + "\n\nThe firmware handles message expiry. The widget changes from Show text to Stop while a message is running. Stop cancels it and selects the clock screen. Saving new settings does not change the active message or its Stop target."
                 + "\n\nPreview is approximate. Available characters, fonts, and scrolling depend on your firmware. No cloud account or analytics.", 14, ink, false);
-        body.setPadding(dp(24), dp(10), dp(24), dp(16)); body.setTextIsSelectable(true); android.text.util.Linkify.addLinks(body, android.text.util.Linkify.WEB_URLS | android.text.util.Linkify.EMAIL_ADDRESSES);
+        body.setPadding(dp(24), dp(10), dp(24), dp(16)); body.setTextIsSelectable(false); android.text.util.Linkify.addLinks(body, android.text.util.Linkify.WEB_URLS | android.text.util.Linkify.EMAIL_ADDRESSES); body.setLinksClickable(true); body.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
         ScrollView scroll = new ScrollView(this); scroll.addView(body);
         new AlertDialog.Builder(this).setTitle("About").setView(scroll).setPositiveButton("Close", null).show();
     }
